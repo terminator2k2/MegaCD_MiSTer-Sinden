@@ -332,6 +332,7 @@ reg [11:0] vs_line = 0;
 reg        scaler_out = 0;
 reg        vrr_mode = 0;
 
+
 reg [31:0] aflt_rate = 7056000;
 reg [39:0] acx  = 4258969;
 reg  [7:0] acx0 = 3;
@@ -737,6 +738,7 @@ wire         freeze;
 		.o_de     (hdmi_de),
 		.o_vbl    (hdmi_vbl),
 		.o_brd    (hdmi_brd),
+		.gun_border_en(gun_border_en),
 		.o_lltune (lltune),
 		.htotal   (WIDTH + HFP + HBP + HS[11:0]),
 		.hsstart  (WIDTH + HFP),
@@ -1707,6 +1709,8 @@ wire [13:0] fb_stride;
 
 reg  [1:0] sl_r;
 wire [1:0] sl = sl_r;
+wire       gun_border_en;
+
 always @(posedge clk_sys) sl_r <= FB_EN ? 2'b00 : scanlines;
 
 emu emu
@@ -1734,12 +1738,14 @@ emu emu
 	.HDMI_WIDTH(direct_video ? 12'd0 : hdmi_width),
 	.HDMI_HEIGHT(direct_video ? 12'd0 : hdmi_height),
 	.HDMI_FREEZE(freeze),
+	
 
 	.CLK_VIDEO(clk_vid),
 	.CE_PIXEL(ce_pix),
 	.VGA_SL(scanlines),
 	.VIDEO_ARX(ARX),
 	.VIDEO_ARY(ARY),
+	
 
 `ifdef MISTER_FB
 	.FB_EN(fb_en),
@@ -1811,6 +1817,7 @@ emu emu
 
 	.BUTTONS(btn),
 	.OSD_STATUS(osd_status),
+	
 
 	.SD_SCK(SD_CLK),
 	.SD_MOSI(SD_MOSI),
@@ -1826,7 +1833,10 @@ emu emu
 	.UART_DSR(uart_dtr),
 
 	.USER_OUT(user_out),
-	.USER_IN(user_in)
+	.USER_IN(user_in),
+	.gun_border_en(gun_border_en),
+	
+	
 );
 
 endmodule
