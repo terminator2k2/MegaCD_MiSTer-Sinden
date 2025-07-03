@@ -58,6 +58,7 @@ module emu
 	input  [11:0] HDMI_WIDTH,
 	input  [11:0] HDMI_HEIGHT,
 	output        HDMI_FREEZE,
+	output        GUN_BORDER_EN,
 	output        HDMI_BLACKOUT,
 	output        HDMI_BOB_DEINT,
 
@@ -196,6 +197,7 @@ assign AUDIO_S   = 1;
 assign AUDIO_MIX = 0;
 wire [1:0] ar = status[50:49];
 wire [7:0] arx,ary;
+assign GUN_BORDER_EN = status[59];
 
 always_comb begin
 	case(res) // {V30, H40}
@@ -318,7 +320,7 @@ end
 // 0         1         2         3          4         5         6   
 // 01234567890123456789012345678901 23456789012345678901234567890123
 // 0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV
-// XXXXXXXXX XXXXXXXXXXXXXXXXXX XXX XXXXXXXXXXXXXXXXXXXXXXXXXXX
+// XXXXXXXXX XXXXXXXXXXXXXXXXXX XXX XXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 `include "build_id.v"
 localparam CONF_STR = {
@@ -340,6 +342,7 @@ localparam CONF_STR = {
 
 	"P1,Audio & Video;",
 	"P1-;",
+	"P1oR,Sinden Boarder,Off,On;",
 	"P1oHI,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"P1OU,320x224 Aspect,Original,Corrected;",
 	"P1o13,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
