@@ -129,6 +129,13 @@ ENTITY ascal IS
 		IHRES        : natural RANGE 1 TO 2048 :=2048;
 		N_DW         : natural RANGE 64 TO 128 := 128;
 		N_AW         : natural RANGE 8 TO 32 := 32;
+
+		 -- Sinden Lightgun support border
+                BORDER_H     : natural := 20;
+                BORDER_V     : natural := 20;
+                BORDER_H2    : natural := 28;
+                BORDER_V2    : natural := 28;
+                                
 		N_BURST      : natural := 256 -- 256 bytes per burst
 		);
 	PORT (
@@ -258,8 +265,8 @@ ENTITY ascal IS
 
 BEGIN
 	ASSERT N_DW=64 OR N_DW=128 REPORT "DW" SEVERITY failure;
-	
-	ASSERT OHRES = 1024 OR OHRES = 2048 OR OHRES = 2304 OR
+
+  ASSERT OHRES = 1024 OR OHRES = 2048 OR OHRES = 2304 OR
 	       OHRES = 2560 OR OHRES = 4096 REPORT "OHRES" SEVERITY failure;
 
 END ENTITY ascal;
@@ -291,8 +298,8 @@ ARCHITECTURE rtl OF ascal IS
 		ELSE RETURN '0';
 		END IF;
 	END FUNCTION to_std_logic;
-
-	----------------------------------------------------------
+    
+    ----------------------------------------------------------
 	FUNCTION ohres_h(CONSTANT r : natural) RETURN natural IS
 	BEGIN
 		CASE r IS
@@ -316,7 +323,7 @@ ARCHITECTURE rtl OF ascal IS
 			WHEN OTHERS             => RETURN 512;
 		END CASE;
 	END FUNCTION;
-	
+
 	CONSTANT OHRESH : natural := ohres_h(OHRES);
 	CONSTANT OHRESL : natural := ohres_l(OHRES);
 	CONSTANT OHRESM : natural := ohres_m(OHRES);
@@ -496,7 +503,7 @@ ARCHITECTURE rtl OF ascal IS
 	ATTRIBUTE ramstyle OF o_dpram : SIGNAL IS "no_rw_check";
 	SIGNAL o_line0,o_line1,o_line2,o_line3 : arr_pix(0 TO OHRESL-1);
 	SIGNAL o_linf0,o_linf1,o_linf2,o_linf3 : arr_pix(0 TO OHRESM-1);
-
+                          
 	ATTRIBUTE ramstyle OF o_line0 : SIGNAL IS "no_rw_check";
 	ATTRIBUTE ramstyle OF o_line1 : SIGNAL IS "no_rw_check";
 	ATTRIBUTE ramstyle OF o_line2 : SIGNAL IS "no_rw_check";
@@ -519,7 +526,7 @@ ARCHITECTURE rtl OF ascal IS
 	ATTRIBUTE ramstyle OF o_hfrac : SIGNAL IS "logic"; -- avoid blockram shift register
 
 	SIGNAL o_hacc,o_hacc_ini,o_hacc_next,o_vacc,o_vacc_next,o_vacc_ini : natural RANGE 0 TO 4*OHRESH-1;
-	SIGNAL o_hsv,o_vsv,o_dev,o_pev,o_end : unsigned(0 TO 11);
+	SIGNAL o_hsv,o_vsv,o_dev,o_pev,o_bzl,o_end : unsigned(0 TO 11);
 	SIGNAL o_hsp,o_vss : std_logic;
 	SIGNAL o_vcarrym,o_prim : boolean;
 	SIGNAL o_read,o_read_pre : std_logic;
@@ -545,6 +552,7 @@ ARCHITECTURE rtl OF ascal IS
 	SIGNAL o_vpixq, o_vpixq_pre : arr_pix(0 TO 3);
 	SIGNAL o_vpix_outer : arr_pix(0 TO 2);
 	SIGNAL o_vpix_inner : arr_pix(0 TO 6);
+
 
 	SIGNAL o_vpe : std_logic;
 	SIGNAL o_div : arr_div(0 TO 2); --uint12;
@@ -1889,15 +1897,15 @@ BEGIN
 			o_hsstart<=hsstart; -- <ASYNC> ?
 			o_hsend  <=hsend; -- <ASYNC> ?
 			o_hdisp  <=hdisp; -- <ASYNC> ?
-			o_hmin   <=hmin; -- <ASYNC> ?
-			o_hmax   <=hmax; -- <ASYNC> ?
+			o_hmin   <=hmin + BORDER_H2; -- <ASYNC> ?
+                        o_hmax   <=hmax - BORDER_H2; -- <ASYNC> ?
 
 			o_vtotal <=vtotal; -- <ASYNC> ?
 			o_vsstart<=vsstart; -- <ASYNC> ?
 			o_vsend  <=vsend; -- <ASYNC> ?
 			o_vdisp  <=vdisp; -- <ASYNC> ?
-			o_vmin   <=vmin; -- <ASYNC> ?
-			o_vmax   <=vmax; -- <ASYNC> ?
+			o_vmin   <=vmin + BORDER_H2; -- <ASYNC> ?
+                        o_vmax   <=vmax - BORDER_H2; -- <ASYNC> ?
 
 			o_hsize  <=o_hmax - o_hmin + 1;
 			o_vsize  <=o_vmax - o_vmin + 1;
@@ -2182,9 +2190,9 @@ BEGIN
 			------------------------------------------------------
 			-- Copy from buffered memory to pixel lines
 			o_sh<='0';
-			o_dcpt_clr <= '0';
+      o_dcpt_clr <= '0';
 			o_dcpt_inc <= '0';
-
+          
 			CASE o_copy IS
 				WHEN sWAIT =>
 					o_copyv(0)<='0';
@@ -2611,7 +2619,7 @@ BEGIN
 			o_hfrac(2 TO 9) <= o_hfrac(1 TO 8);
 
 			o_copyv(1 TO 14)<=o_copyv(0 TO 13);
-			o_dcptv_clr(1 TO 12)<=o_dcpt_clr & o_dcptv_clr(1 TO 11);
+      o_dcptv_clr(1 TO 12)<=o_dcpt_clr & o_dcptv_clr(1 TO 11);
 			o_dcptv_inc(1 TO 12)<=o_dcpt_inc & o_dcptv_inc(1 TO 11);
 
 			IF o_dcptv_clr(12)='1' THEN
@@ -2621,9 +2629,10 @@ BEGIN
 			END IF;
 			o_dcptv(14)<=o_dcptv(13);
 
-			IF o_dcptv(13)>=o_hsize THEN
+		  IF o_dcptv(13)>=o_hsize THEN
 				o_copyv(14)<='0';
 			END IF;
+			
 
 			-- C2
 			o_hpixq(2)<=(o_hpix3,o_hpix2,o_hpix1,o_hpix0);
@@ -2716,7 +2725,7 @@ BEGIN
 	OLBUF:PROCESS(o_clk) IS
 	BEGIN
 		IF rising_edge(o_clk) THEN
-			-----------------------------------------------
+      -----------------------------------------------
 			-- WRITES
 			IF o_wr(0)='1' AND o_wadl < OHRESL  THEN o_line0(o_wadl MOD OHRESL)<=o_ldw; END IF;
 			IF o_wr(1)='1' AND o_wadl < OHRESL  THEN o_line1(o_wadl MOD OHRESL)<=o_ldw; END IF;
@@ -2730,6 +2739,7 @@ BEGIN
 			END IF;
 
 			-----------------------------------------------
+
 			-- READS
 			o_ldr0<=o_line0(o_radl0 MOD OHRESL);
 			o_ldr1<=o_line1(o_radl1 MOD OHRESL);
@@ -2791,12 +2801,15 @@ BEGIN
 				o_vsv(0)<=to_std_logic((o_vcpt=o_vsstart AND o_hcpt>=o_hsstart) OR
 											  (o_vcpt>o_vsstart AND o_vcpt<o_vsend) OR
 											  (o_vcpt=o_vsend   AND o_hcpt<o_hsstart));
+				o_bzl(0)<=to_std_logic(o_hcpt>=o_hmin-BORDER_H AND o_hcpt<=o_hmax+BORDER_H AND
+                                       o_vcpt>=o_vmin-BORDER_V AND o_vcpt<=o_vmax+BORDER_V);		
 
 				o_vss<=to_std_logic(o_vcpt_pre2>=o_vmin AND o_vcpt_pre2<=o_vmax);
 				o_hsv(1 TO 11)<=o_hsv(0 TO 10);
 				o_vsv(1 TO 11)<=o_vsv(0 TO 10);
 				o_dev(1 TO 11)<=o_dev(0 TO 10);
 				o_pev(1 TO 11)<=o_pev(0 TO 10);
+                                o_bzl(1 TO 11)<=o_bzl(0 TO 10);
 				o_end(1 TO 11)<=o_end(0 TO 10);
 
 				IF o_run='0' THEN
@@ -2804,6 +2817,7 @@ BEGIN
 					o_vsv(2)<='0';
 					o_dev(2)<='0';
 					o_pev(2)<='0';
+                                        o_bzl(2)<='0';
 					o_end(2)<='0';
 				END IF;
 			END IF;
@@ -2836,7 +2850,7 @@ BEGIN
 		VARIABLE vlumpix_v : type_pix;
 		VARIABLE r1_v, r2_v : natural RANGE 0 TO OHRESH-1;
 		VARIABLE fracnn_v : std_logic;
-		VARIABLE o_l0_v, o_l1_v, o_l2_v, o_l3_v : type_pix;
+    VARIABLE o_l0_v, o_l1_v, o_l2_v, o_l3_v : type_pix;
 	BEGIN
 		IF rising_edge(o_clk) THEN
 			IF o_ce='1' THEN
@@ -2871,11 +2885,11 @@ BEGIN
 
 				-- CYCLE 2 -----------------------------------------
 				-- Lines reordering
-				IF o_lex0='0' THEN o_l0_v := o_ldr0; ELSE o_l0_v := o_ler0; END IF;
+        IF o_lex0='0' THEN o_l0_v := o_ldr0; ELSE o_l0_v := o_ler0; END IF;
 				IF o_lex1='0' THEN o_l1_v := o_ldr1; ELSE o_l1_v := o_ler1; END IF;
 				IF o_lex2='0' THEN o_l2_v := o_ldr2; ELSE o_l2_v := o_ler2; END IF;
-				IF o_lex3='0' THEN o_l3_v := o_ldr3; ELSE o_l3_v := o_ler3; END IF;
-
+				IF o_lex3='0' THEN o_l3_v := o_ldr3; ELSE o_l3_v := o_ler3; END IF; 
+                            
 				CASE o_vacptl IS
 					WHEN "10"   => pixq_v:=(o_l0_v,o_l1_v,o_l2_v,o_l3_v);
 					WHEN "11"   => pixq_v:=(o_l1_v,o_l2_v,o_l3_v,o_l0_v);
@@ -3007,10 +3021,16 @@ BEGIN
 				END CASE;
 
 				IF o_pev(11)='0' THEN
+				   IF o_bzl(11)='1' THEN
+						o_r<=x"FF";
+						o_g<=x"FF";
+						o_b<=x"FF";
+					ELSE
 					o_r<=o_border(23 DOWNTO 16); -- Copy border colour
 					o_g<=o_border(15 DOWNTO 8);
 					o_b<=o_border(7  DOWNTO 0);
 				END IF;
+			END IF;	
 
 				----------------------------------------------------
 			END IF;
